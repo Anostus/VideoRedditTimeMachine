@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Educational Video Post Time Machine — Inline YouTube Results</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1c2230;
+      --text: #edf2f7;
+      --muted: #a0aec0;
+      --accent: #8b5cf6;
+      --accent-2: #22c55e;
+      --border: #2d3748;
+      --shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+      --danger: #fca5a5;
+      --warning-bg: rgba(251, 191, 36, 0.12);
+      --warning-border: rgba(251, 191, 36, 0.32);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1a1f2b 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .wrap {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero,
+    .subreddit-card,
+    .note,
+    .results-shell,
+    .post-card {
+      background: rgba(23, 26, 33, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.9rem, 2.6vw, 2.85rem);
+      line-height: 1.1;
+    }
+
+    .hero p,
+    .note,
+    .mini-note,
+    .status,
+    .empty-state {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .hero p { margin: 0; max-width: 86ch; }
+
+    .month-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(139, 92, 246, 0.14);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      color: #ddd6fe;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .subreddit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .subreddit-card {
+      padding: 18px;
+    }
+
+    .subreddit-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: rgba(34, 197, 94, 0.12);
+      color: #bbf7d0;
+      border: 1px solid rgba(34, 197, 94, 0.28);
+      margin-bottom: 12px;
+    }
+
+    .subreddit-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.14rem;
+    }
+
+    .subreddit-card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .btn:disabled {
+      cursor: progress;
+      opacity: 0.72;
+    }
+
+    .btn-link {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: #fff;
+    }
+
+    .btn-video {
+      background: #202633;
+      color: #edf2f7;
+      border-color: #374151;
+    }
+
+    .btn-video:hover:not(:disabled) {
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+
+    .mini-note { font-size: 0.84rem; }
+
+    .note {
+      margin-top: 20px;
+      padding: 16px 18px;
+      font-size: 0.9rem;
+    }
+
+    .results-shell {
+      margin-top: 14px;
+      padding: 14px;
+      background: rgba(12, 16, 24, 0.84);
+      border-radius: 16px;
+    }
+
+    .results-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .results-head h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .results-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid #374151;
+      color: #dbeafe;
+      background: rgba(59, 130, 246, 0.10);
+    }
+
+    .status {
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    .empty-state,
+    .error-state {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--warning-border);
+      background: var(--warning-bg);
+      font-size: 0.92rem;
+    }
+
+    .error-state {
+      color: #fed7d7;
+      border-color: rgba(248, 113, 113, 0.3);
+      background: rgba(127, 29, 29, 0.16);
+    }
+
+    .post-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .post-card {
+      padding: 14px;
+      background: rgba(28, 34, 48, 0.92);
+      border-radius: 16px;
+    }
+
+    .post-top {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .thumb {
+      width: 96px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid #374151;
+      background: #111827;
+    }
+
+    .thumb-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 96px;
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      border: 1px dashed #374151;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 8px;
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    .post-title {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .post-title a:hover {
+      text-decoration: underline;
+    }
+
+    .meta-row,
+    .link-row,
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .meta-chip,
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      border: 1px solid #374151;
+      background: rgba(148, 163, 184, 0.10);
+      color: #e2e8f0;
+    }
+
+    .badge {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.28);
+      color: #d1fae5;
+    }
+
+    .snippet {
+      margin: 0;
+      color: #dbe2ea;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .link-row a {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #c4b5fd;
+    }
+
+    .link-row a:hover {
+      text-decoration: underline;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      color: #e9d5ff;
+    }
+
+    @media (max-width: 720px) {
+      .post-top {
+        grid-template-columns: 1fr;
+      }
+
+      .thumb,
+      .thumb-fallback {
+        width: 100%;
+        max-width: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Educational Video Post Time Machine</h1>
+      <p>
+        This version keeps the <strong>Top posts</strong> link as an outbound PullPush search,
+        and the <strong>Load YouTube video posts</strong> button now fetches the PullPush API JSON,
+        filters it to <strong>YouTube links only</strong>, and renders only those posts on the page for the whole month <strong>10 years earlier</strong>,
+        sorted by score descending.
+      </p>
+      <div class="month-pill" id="targetMonthLabel">Loading target month…</div>
+    </section>
+
+    <section class="subreddit-grid" id="subredditGrid"></section>
+
+    <div class="note" id="rangeNote">Building month range…</div>
+  </div>
+
+  <script>
+    const SUBREDDITS = [
+      { name: 'Lectures', label: 'r/Lectures', note: 'talks and academic presentations' },
+      { name: 'Documentaries', label: 'r/Documentaries', note: 'documentary-focused picks' },
+      { name: 'videoessays', label: 'r/videoessays', note: 'essay-style video analysis' },
+      { name: 'curiousvideos', label: 'r/curiousvideos', note: 'curiosity-driven educational videos' },
+      { name: 'mealtimevideos', label: 'r/mealtimevideos', note: 'long-form watchable videos' }
+    ];
+
+    const API_BASE = 'https://api.pullpush.io/reddit/search/submission/';
+    const SEARCH_UI_BASE = 'https://search.pullpush.io/';
+
+    const gridEl = document.getElementById('subredditGrid');
+    const monthLabelEl = document.getElementById('targetMonthLabel');
+    const rangeNoteEl = document.getElementById('rangeNote');
+
+    function getTargetMonthRange(now = new Date()) {
+      const targetYear = now.getFullYear() - 10;
+      const targetMonth = now.getMonth();
+      const startUtcMs = Date.UTC(targetYear, targetMonth, 1, 0, 0, 0, 0);
+      const endUtcMs = Date.UTC(targetYear, targetMonth + 1, 1, 0, 0, 0, 0);
+
+      return {
+        startEpoch: Math.floor(startUtcMs / 1000),
+        endEpoch: Math.floor(endUtcMs / 1000),
+        label: new Intl.DateTimeFormat(undefined, {
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'UTC'
+        }).format(new Date(startUtcMs))
+      };
+    }
+
+    function buildApiUrl(subreddit, range, options = {}) {
+      const params = new URLSearchParams({
+        subreddit,
+        sort_type: 'score',
+        sort: 'desc',
+        size: options.size || '50',
+        after: String(range.startEpoch),
+        before: String(range.endEpoch)
+      });
+
+      return `${API_BASE}?${params.toString()}`;
+    }
+
+    function buildSearchUiUrl(subreddit, range) {
+      const params = new URLSearchParams({
+        subreddit,
+        type: 'submission',
+        sort_type: 'score',
+        sort: 'desc',
+        after: String(range.startEpoch),
+        before: String(range.endEpoch)
+      });
+
+      return `${SEARCH_UI_BASE}?${params.toString()}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function safeText(value, fallback = '') {
+      if (value === null || value === undefined || value === '') return fallback;
+      return String(value);
+    }
+
+    function truncate(text, max = 260) {
+      const clean = safeText(text).replace(/\s+/g, ' ').trim();
+      if (!clean) return '';
+      return clean.length > max ? `${clean.slice(0, max - 1).trimEnd()}…` : clean;
+    }
+
+    function isUsefulThumbnail(value) {
+      if (!value || typeof value !== 'string') return false;
+      if (!/^https?:\/\//i.test(value)) return false;
+      const bad = new Set(['self', 'default', 'nsfw', 'spoiler', 'image']);
+      return !bad.has(value.toLowerCase());
+    }
+
+
+    function isYouTubeUrl(value) {
+      if (!value || typeof value !== 'string') return false;
+      try {
+        const url = new URL(value);
+        const host = url.hostname.toLowerCase().replace(/^www\./, '');
+        return host === 'youtube.com'
+          || host.endsWith('.youtube.com')
+          || host === 'youtu.be'
+          || host === 'youtube-nocookie.com'
+          || host.endsWith('.youtube-nocookie.com');
+      } catch {
+        return false;
+      }
+    }
+
+    function isYouTubePost(post) {
+      const url = safeText(post?.url, '');
+      const domain = safeText(post?.domain, '').toLowerCase();
+      return isYouTubeUrl(url) || domain === 'youtube.com' || domain === 'youtu.be' || domain.endsWith('.youtube.com');
+    }
+
+    function formatEpoch(value) {
+      const epoch = Number(value);
+      if (!Number.isFinite(epoch) || epoch <= 0) return 'Unknown date';
+      return new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC'
+      }).format(new Date(epoch * 1000));
+    }
+
+    function redditCommentsUrl(post) {
+      if (post.permalink) return `https://www.reddit.com${post.permalink}`;
+      const subreddit = safeText(post.subreddit);
+      const id = safeText(post.id);
+      return subreddit && id ? `https://www.reddit.com/r/${subreddit}/comments/${id}/` : '#';
+    }
+
+    function externalUrl(post) {
+      const url = safeText(post.url, '');
+      return /^https?:\/\//i.test(url) ? url : redditCommentsUrl(post);
+    }
+
+    function makeEl(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+
+    function makeAnchor(href, text) {
+      const a = document.createElement('a');
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = text;
+      return a;
+    }
+
+    function buildBadgeRow(post) {
+      const row = makeEl('div', 'badge-row');
+      const badges = [];
+
+      if (post.is_video) badges.push('Video');
+      if (post.is_self) badges.push('Self post');
+      if (post.over_18) badges.push('NSFW');
+      const domain = safeText(post.domain, '');
+      if (domain && !domain.startsWith('self.')) badges.push(domain);
+
+      if (!badges.length) return null;
+      for (const label of badges) row.appendChild(makeEl('span', 'badge', label));
+      return row;
+    }
+
+    function buildPostCard(post, index) {
+      const article = makeEl('article', 'post-card');
+      const top = makeEl('div', 'post-top');
+
+      if (isUsefulThumbnail(post.thumbnail)) {
+        const img = document.createElement('img');
+        img.className = 'thumb';
+        img.src = post.thumbnail;
+        img.alt = `${safeText(post.title, 'Post')} thumbnail`;
+        img.loading = 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        top.appendChild(img);
+      } else {
+        top.appendChild(makeEl('div', 'thumb-fallback', `#${index + 1}`));
+      }
+
+      const body = document.createElement('div');
+      const title = makeEl('h4', 'post-title');
+      title.appendChild(makeAnchor(externalUrl(post), safeText(post.title, 'Untitled post')));
+      body.appendChild(title);
+
+      const metaRow = makeEl('div', 'meta-row');
+      metaRow.appendChild(makeEl('span', 'meta-chip', `Score ${safeText(post.score, '0')}`));
+      metaRow.appendChild(makeEl('span', 'meta-chip', `${safeText(post.num_comments, '0')} comments`));
+      metaRow.appendChild(makeEl('span', 'meta-chip', `u/${safeText(post.author, '[deleted]')}`));
+      metaRow.appendChild(makeEl('span', 'meta-chip', formatEpoch(post.created_utc || post.created)));
+      body.appendChild(metaRow);
+
+      const badgeRow = buildBadgeRow(post);
+      if (badgeRow) body.appendChild(badgeRow);
+
+      const snippetSource = truncate(post.selftext || '');
+      if (snippetSource) {
+        body.appendChild(makeEl('p', 'snippet', snippetSource));
+      }
+
+      const links = makeEl('div', 'link-row');
+      links.appendChild(makeAnchor(redditCommentsUrl(post), 'Reddit comments'));
+      const outUrl = externalUrl(post);
+      if (outUrl !== redditCommentsUrl(post)) links.appendChild(makeAnchor(outUrl, 'Open linked media'));
+      body.appendChild(links);
+
+      top.appendChild(body);
+      article.appendChild(top);
+      return article;
+    }
+
+    async function loadVideoPosts(subreddit, range, button, resultsEl) {
+      const apiUrl = buildApiUrl(subreddit.name, range, { size: '100' });
+      button.disabled = true;
+      button.textContent = 'Loading…';
+      resultsEl.innerHTML = `<div class="status">Fetching top posts from PullPush and filtering to YouTube links…</div>`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          headers: { 'Accept': 'application/json' },
+          mode: 'cors'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const allPosts = Array.isArray(payload?.data) ? payload.data : [];
+        const posts = allPosts.filter(isYouTubePost);
+
+        const shell = makeEl('section', 'results-shell');
+        const head = makeEl('div', 'results-head');
+        const heading = makeEl('h3', '', `${subreddit.label} · YouTube posts`);
+        head.appendChild(heading);
+
+        const meta = makeEl('div', 'results-meta');
+        meta.appendChild(makeEl('span', 'pill', `${posts.length} YouTube result${posts.length === 1 ? '' : 's'}`));
+        meta.appendChild(makeEl('span', 'pill', range.label));
+        head.appendChild(meta);
+        shell.appendChild(head);
+
+        const status = makeEl('div', 'status', `Showing only YouTube links from ${range.label}, sorted by score descending.`);
+        shell.appendChild(status);
+
+        if (!posts.length) {
+          const empty = makeEl('div', 'empty-state', 'No YouTube links were found in the returned posts for this subreddit in that month.');
+          shell.appendChild(empty);
+        } else {
+          const list = makeEl('div', 'post-list');
+          posts.forEach((post, index) => list.appendChild(buildPostCard(post, index)));
+          shell.appendChild(list);
+        }
+
+        resultsEl.innerHTML = '';
+        resultsEl.appendChild(shell);
+      } catch (error) {
+        const safeApiUrl = escapeHtml(apiUrl);
+        resultsEl.innerHTML = `
+          <div class="results-shell">
+            <div class="error-state">
+              Could not load the PullPush response directly in the page. This can happen if the API blocks cross-origin browser requests.<br><br>
+              <a href="${safeApiUrl}" target="_blank" rel="noopener noreferrer">Open the raw subreddit API response</a>
+            </div>
+          </div>
+        `;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Load YouTube video posts';
+      }
+    }
+
+    function render() {
+      const range = getTargetMonthRange();
+      monthLabelEl.textContent = `${range.label} · same month 10 years earlier`;
+      rangeNoteEl.innerHTML = `Month window: <code>after=${range.startEpoch}</code> and <code>before=${range.endEpoch}</code>.<br>
+        <strong>Top posts</strong> opens the regular PullPush search UI. <strong>Load YouTube video posts</strong> uses the API for the month’s top posts and renders only entries whose linked URL points to YouTube.`;
+
+      gridEl.innerHTML = '';
+
+      for (const sub of SUBREDDITS) {
+        const card = makeEl('article', 'subreddit-card');
+        card.innerHTML = `
+          <div class="subreddit-tag">${escapeHtml(sub.label)}</div>
+          <h2>${escapeHtml(sub.label)}</h2>
+          <p>${escapeHtml(sub.note)}</p>
+          <div class="button-row"></div>
+          <div class="mini-note">Only YouTube-linked results render inline below this subreddit card.</div>
+          <div class="results-area"></div>
+        `;
+
+        const buttonRow = card.querySelector('.button-row');
+        const resultsEl = card.querySelector('.results-area');
+
+        const topLink = makeAnchor(buildSearchUiUrl(sub.name, range), 'Top posts');
+        topLink.className = 'btn btn-link';
+
+        const videoBtn = makeEl('button', 'btn btn-video', 'Load YouTube video posts');
+        videoBtn.type = 'button';
+        videoBtn.addEventListener('click', () => loadVideoPosts(sub, range, videoBtn, resultsEl));
+
+        buttonRow.appendChild(topLink);
+        buttonRow.appendChild(videoBtn);
+        gridEl.appendChild(card);
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
