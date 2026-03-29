@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Educational Video Post Time Machine — Inline YouTube Results</title>
   <style>
     :root {
@@ -42,7 +41,6 @@
     }
 
     .hero,
-    .subreddit-card,
     .note,
     .results-shell,
     .post-card {
@@ -89,45 +87,16 @@
       letter-spacing: 0.02em;
     }
 
-    .subreddit-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 18px;
-    }
-
-    .subreddit-card {
-      padding: 18px;
-    }
-
     .subreddit-tag {
       display: inline-flex;
       align-items: center;
-      padding: 7px 10px;
+      padding: 5px 8px;
       border-radius: 999px;
-      font-size: 0.82rem;
+      font-size: 0.74rem;
       font-weight: 700;
       background: rgba(34, 197, 94, 0.12);
       color: #bbf7d0;
       border: 1px solid rgba(34, 197, 94, 0.28);
-      margin-bottom: 12px;
-    }
-
-    .subreddit-card h2 {
-      margin: 0 0 6px;
-      font-size: 1.14rem;
-    }
-
-    .subreddit-card p {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.94rem;
-    }
-
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 12px;
     }
 
     .btn {
@@ -149,24 +118,9 @@
       opacity: 0.96;
     }
 
-    .btn:disabled {
-      cursor: progress;
-      opacity: 0.72;
-    }
-
     .btn-link {
       background: linear-gradient(135deg, #8b5cf6, #6d28d9);
       color: #fff;
-    }
-
-    .btn-video {
-      background: #202633;
-      color: #edf2f7;
-      border-color: #374151;
-    }
-
-    .btn-video:hover:not(:disabled) {
-      border-color: rgba(34, 197, 94, 0.45);
     }
 
     .mini-note { font-size: 0.84rem; }
@@ -220,6 +174,7 @@
     .status {
       margin-bottom: 10px;
       font-size: 0.9rem;
+      color: var(--muted);
     }
 
     .empty-state,
@@ -354,6 +309,67 @@
       color: #e9d5ff;
     }
 
+    /* Loading spinner */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 40px 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #374151;
+      border-top-color: #8b5cf6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-sub-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .sub-chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid #374151;
+      transition: all 0.3s ease;
+    }
+
+    .sub-chip.pending {
+      color: #94a3b8;
+      background: rgba(148, 163, 184, 0.08);
+    }
+
+    .sub-chip.loading {
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    .sub-chip.done {
+      color: #bbf7d0;
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.28);
+    }
+
+    .sub-chip.error {
+      color: #fca5a5;
+      background: rgba(127, 29, 29, 0.16);
+      border-color: rgba(248, 113, 113, 0.3);
+    }
+
     @media (max-width: 720px) {
       .post-top {
         grid-template-columns: 1fr;
@@ -372,17 +388,16 @@
     <section class="hero">
       <h1>Educational Video Post Time Machine</h1>
       <p>
-        This version keeps the <strong>Top posts</strong> link as an outbound PullPush search,
-        and the <strong>Load YouTube video posts</strong> button now fetches the PullPush API JSON,
-        filters it to <strong>YouTube links only</strong>, and renders only those posts on the page for the whole month <strong>10 years earlier</strong>,
-        sorted by score descending.
+        Automatically fetches YouTube-linked posts from five educational subreddits
+        for a <strong>1-week window 10 years ago</strong> (3 days before and after today's date that year),
+        and displays them combined and sorted by score.
       </p>
-      <div class="month-pill" id="targetMonthLabel">Loading target month…</div>
+      <div class="month-pill" id="targetMonthLabel">Loading…</div>
     </section>
 
-    <section class="subreddit-grid" id="subredditGrid"></section>
+    <div id="resultsArea"></div>
 
-    <div class="note" id="rangeNote">Building month range…</div>
+    <div class="note" id="rangeNote"></div>
   </div>
 
   <script>
@@ -397,24 +412,31 @@
     const API_BASE = 'https://api.pullpush.io/reddit/search/submission/';
     const SEARCH_UI_BASE = 'https://search.pullpush.io/';
 
-    const gridEl = document.getElementById('subredditGrid');
     const monthLabelEl = document.getElementById('targetMonthLabel');
     const rangeNoteEl = document.getElementById('rangeNote');
+    const resultsArea = document.getElementById('resultsArea');
 
-    function getTargetMonthRange(now = new Date()) {
+    function getTargetWeekRange(now = new Date()) {
       const targetYear = now.getFullYear() - 10;
-      const targetMonth = now.getMonth();
-      const startUtcMs = Date.UTC(targetYear, targetMonth, 1, 0, 0, 0, 0);
-      const endUtcMs = Date.UTC(targetYear, targetMonth + 1, 1, 0, 0, 0, 0);
+      const month = now.getMonth();
+      const day = now.getDate();
+
+      const centerUtcMs = Date.UTC(targetYear, month, day, 12, 0, 0, 0);
+      const startUtcMs = Date.UTC(targetYear, month, day - 3, 0, 0, 0, 0);
+      const endUtcMs = Date.UTC(targetYear, month, day + 3, 23, 59, 59, 0);
+
+      const fmt = new Intl.DateTimeFormat(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+      });
+
+      const startLabel = fmt.format(new Date(startUtcMs));
+      const endLabel = fmt.format(new Date(endUtcMs));
 
       return {
         startEpoch: Math.floor(startUtcMs / 1000),
         endEpoch: Math.floor(endUtcMs / 1000),
-        label: new Intl.DateTimeFormat(undefined, {
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'UTC'
-        }).format(new Date(startUtcMs))
+        label: `${startLabel} – ${endLabel}`,
+        year: targetYear
       };
     }
 
@@ -427,7 +449,6 @@
         after: String(range.startEpoch),
         before: String(range.endEpoch)
       });
-
       return `${API_BASE}?${params.toString()}`;
     }
 
@@ -440,7 +461,6 @@
         after: String(range.startEpoch),
         before: String(range.endEpoch)
       });
-
       return `${SEARCH_UI_BASE}?${params.toString()}`;
     }
 
@@ -470,7 +490,6 @@
       const bad = new Set(['self', 'default', 'nsfw', 'spoiler', 'image']);
       return !bad.has(value.toLowerCase());
     }
-
 
     function isYouTubeUrl(value) {
       if (!value || typeof value !== 'string') return false;
@@ -542,6 +561,10 @@
       const domain = safeText(post.domain, '');
       if (domain && !domain.startsWith('self.')) badges.push(domain);
 
+      // Add subreddit badge
+      const sub = safeText(post.subreddit, '');
+      if (sub) badges.push(`r/${sub}`);
+
       if (!badges.length) return null;
       for (const label of badges) row.appendChild(makeEl('span', 'badge', label));
       return row;
@@ -573,6 +596,10 @@
       metaRow.appendChild(makeEl('span', 'meta-chip', `${safeText(post.num_comments, '0')} comments`));
       metaRow.appendChild(makeEl('span', 'meta-chip', `u/${safeText(post.author, '[deleted]')}`));
       metaRow.appendChild(makeEl('span', 'meta-chip', formatEpoch(post.created_utc || post.created)));
+
+      const subTag = makeEl('span', 'subreddit-tag', `r/${safeText(post.subreddit, '?')}`);
+      metaRow.appendChild(subTag);
+
       body.appendChild(metaRow);
 
       const badgeRow = buildBadgeRow(post);
@@ -594,103 +621,121 @@
       return article;
     }
 
-    async function loadVideoPosts(subreddit, range, button, resultsEl) {
-      const apiUrl = buildApiUrl(subreddit.name, range, { size: '100' });
-      button.disabled = true;
-      button.textContent = 'Loading…';
-      resultsEl.innerHTML = `<div class="status">Fetching top posts from PullPush and filtering to YouTube links…</div>`;
-
-      try {
-        const response = await fetch(apiUrl, {
-          headers: { 'Accept': 'application/json' },
-          mode: 'cors'
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const payload = await response.json();
-        const allPosts = Array.isArray(payload?.data) ? payload.data : [];
-        const posts = allPosts.filter(isYouTubePost);
-
-        const shell = makeEl('section', 'results-shell');
-        const head = makeEl('div', 'results-head');
-        const heading = makeEl('h3', '', `${subreddit.label} · YouTube posts`);
-        head.appendChild(heading);
-
-        const meta = makeEl('div', 'results-meta');
-        meta.appendChild(makeEl('span', 'pill', `${posts.length} YouTube result${posts.length === 1 ? '' : 's'}`));
-        meta.appendChild(makeEl('span', 'pill', range.label));
-        head.appendChild(meta);
-        shell.appendChild(head);
-
-        const status = makeEl('div', 'status', `Showing only YouTube links from ${range.label}, sorted by score descending.`);
-        shell.appendChild(status);
-
-        if (!posts.length) {
-          const empty = makeEl('div', 'empty-state', 'No YouTube links were found in the returned posts for this subreddit in that month.');
-          shell.appendChild(empty);
-        } else {
-          const list = makeEl('div', 'post-list');
-          posts.forEach((post, index) => list.appendChild(buildPostCard(post, index)));
-          shell.appendChild(list);
-        }
-
-        resultsEl.innerHTML = '';
-        resultsEl.appendChild(shell);
-      } catch (error) {
-        const safeApiUrl = escapeHtml(apiUrl);
-        resultsEl.innerHTML = `
-          <div class="results-shell">
-            <div class="error-state">
-              Could not load the PullPush response directly in the page. This can happen if the API blocks cross-origin browser requests.<br><br>
-              <a href="${safeApiUrl}" target="_blank" rel="noopener noreferrer">Open the raw subreddit API response</a>
-            </div>
-          </div>
-        `;
-      } finally {
-        button.disabled = false;
-        button.textContent = 'Load YouTube video posts';
-      }
+    async function fetchSubredditPosts(sub, range) {
+      const apiUrl = buildApiUrl(sub.name, range, { size: '100' });
+      const response = await fetch(apiUrl, {
+        headers: { 'Accept': 'application/json' },
+        mode: 'cors'
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const allPosts = Array.isArray(payload?.data) ? payload.data : [];
+      return allPosts.filter(isYouTubePost);
     }
 
-    function render() {
-      const range = getTargetMonthRange();
-      monthLabelEl.textContent = `${range.label} · same month 10 years earlier`;
-      rangeNoteEl.innerHTML = `Month window: <code>after=${range.startEpoch}</code> and <code>before=${range.endEpoch}</code>.<br>
-        <strong>Top posts</strong> opens the regular PullPush search UI. <strong>Load YouTube video posts</strong> uses the API for the month’s top posts and renders only entries whose linked URL points to YouTube.`;
+    async function loadAllSubreddits() {
+      const range = getTargetWeekRange();
 
-      gridEl.innerHTML = '';
+      monthLabelEl.textContent = `${range.label} · 1 week window, 10 years ago`;
+      rangeNoteEl.innerHTML = `Week window: <code>after=${range.startEpoch}</code> and <code>before=${range.endEpoch}</code> (${escapeHtml(range.label)}).<br>
+        Fetches the PullPush API for each subreddit's top posts in that week and displays only YouTube-linked entries, sorted by score descending.`;
 
+      // Show loading state
+      resultsArea.innerHTML = '';
+      const loadingContainer = makeEl('div', 'loading-container');
+      loadingContainer.appendChild(makeEl('div', 'spinner'));
+      loadingContainer.appendChild(makeEl('div', 'status', 'Fetching YouTube posts from all subreddits…'));
+
+      const subStatusRow = makeEl('div', 'loading-sub-status');
+      const chipEls = {};
       for (const sub of SUBREDDITS) {
-        const card = makeEl('article', 'subreddit-card');
-        card.innerHTML = `
-          <div class="subreddit-tag">${escapeHtml(sub.label)}</div>
-          <h2>${escapeHtml(sub.label)}</h2>
-          <p>${escapeHtml(sub.note)}</p>
-          <div class="button-row"></div>
-          <div class="mini-note">Only YouTube-linked results render inline below this subreddit card.</div>
-          <div class="results-area"></div>
-        `;
-
-        const buttonRow = card.querySelector('.button-row');
-        const resultsEl = card.querySelector('.results-area');
-
-        const topLink = makeAnchor(buildSearchUiUrl(sub.name, range), 'Top posts');
-        topLink.className = 'btn btn-link';
-
-        const videoBtn = makeEl('button', 'btn btn-video', 'Load YouTube video posts');
-        videoBtn.type = 'button';
-        videoBtn.addEventListener('click', () => loadVideoPosts(sub, range, videoBtn, resultsEl));
-
-        buttonRow.appendChild(topLink);
-        buttonRow.appendChild(videoBtn);
-        gridEl.appendChild(card);
+        const chip = makeEl('span', 'sub-chip pending', sub.label);
+        chipEls[sub.name] = chip;
+        subStatusRow.appendChild(chip);
       }
+      loadingContainer.appendChild(subStatusRow);
+      resultsArea.appendChild(loadingContainer);
+
+      // Fetch all in parallel
+      const allPosts = [];
+      const errors = [];
+
+      const promises = SUBREDDITS.map(async (sub) => {
+        chipEls[sub.name].className = 'sub-chip loading';
+        try {
+          const posts = await fetchSubredditPosts(sub, range);
+          chipEls[sub.name].className = 'sub-chip done';
+          chipEls[sub.name].textContent = `${sub.label} (${posts.length})`;
+          return { sub, posts };
+        } catch (err) {
+          chipEls[sub.name].className = 'sub-chip error';
+          chipEls[sub.name].textContent = `${sub.label} ✗`;
+          errors.push({ sub, err });
+          return { sub, posts: [] };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      for (const r of results) {
+        allPosts.push(...r.posts);
+      }
+
+      // Sort combined results by score descending
+      allPosts.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+
+      // Render
+      resultsArea.innerHTML = '';
+
+      const shell = makeEl('section', 'results-shell');
+      const head = makeEl('div', 'results-head');
+      const heading = makeEl('h3', '', `All Subreddits · YouTube posts`);
+      head.appendChild(heading);
+
+      const meta = makeEl('div', 'results-meta');
+      meta.appendChild(makeEl('span', 'pill', `${allPosts.length} YouTube result${allPosts.length === 1 ? '' : 's'}`));
+      meta.appendChild(makeEl('span', 'pill', range.label));
+      if (errors.length) {
+        meta.appendChild(makeEl('span', 'pill', `${errors.length} subreddit${errors.length === 1 ? '' : 's'} failed`));
+      }
+      head.appendChild(meta);
+      shell.appendChild(head);
+
+      // Per-subreddit search links
+      const linksRow = makeEl('div', 'meta-row');
+      linksRow.style.marginBottom = '12px';
+      for (const sub of SUBREDDITS) {
+        const a = makeAnchor(buildSearchUiUrl(sub.name, range), `${sub.label} on PullPush`);
+        a.className = 'btn btn-link';
+        a.style.fontSize = '0.78rem';
+        a.style.padding = '6px 10px';
+        linksRow.appendChild(a);
+      }
+      shell.appendChild(linksRow);
+
+      const status = makeEl('div', 'status', `Showing YouTube links from ${range.label} across all 5 subreddits, sorted by score.`);
+      shell.appendChild(status);
+
+      if (errors.length) {
+        for (const { sub, err } of errors) {
+          const errEl = makeEl('div', 'error-state', `Could not load ${sub.label}: ${err.message}`);
+          errEl.style.marginBottom = '10px';
+          shell.appendChild(errEl);
+        }
+      }
+
+      if (!allPosts.length) {
+        const empty = makeEl('div', 'empty-state', 'No YouTube links were found across any subreddit for this week.');
+        shell.appendChild(empty);
+      } else {
+        const list = makeEl('div', 'post-list');
+        allPosts.forEach((post, index) => list.appendChild(buildPostCard(post, index)));
+        shell.appendChild(list);
+      }
+
+      resultsArea.appendChild(shell);
     }
 
-    render();
+    // Auto-run on page load
+    loadAllSubreddits();
   </script>
-</body>
-</html>
+</body></html>
